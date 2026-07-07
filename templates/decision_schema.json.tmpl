@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://your-domain/decision-state/v1",
+  "title": "DecisionState — 声明式决策状态",
+  "description": "脚本预计算后输出的状态快照，LLM 只接收此结构做逻辑抉择。",
+  "type": "object",
+  "required": ["timestamp", "regime", "items"],
+  "properties": {
+    "timestamp": {"type": "string", "format": "date-time"},
+    "regime": {
+      "type": "object",
+      "required": ["name", "level"],
+      "properties": {
+        "name": {"type": "string", "description": "当前所处环境/阶段"},
+        "level": {"type": "integer", "minimum": 0, "description": "严重等级"},
+        "cap": {"type": "number", "minimum": 0, "maximum": 1},
+        "factors": {"type": "object", "description": "触发因子详情"}
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": {"type": "string"},
+          "status": {"type": "string"},
+          "metrics": {"type": "object"},
+          "flags": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "alerts": {
+      "type": "object",
+      "properties": {
+        "critical": {"type": "array", "items": {"type": "string"}},
+        "warnings": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

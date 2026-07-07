@@ -1,0 +1,50 @@
+# Operator Catalog — 决策算子库
+
+> 算子 = 内部决策脚手架，不直接输出给用户。
+> 面向用户的报告始终是自然语言。
+> 算子用于：压缩 LLM 内部决策路径、供 validator 校验、供脚本解析执行。
+
+## 一、动作算子（Action Ops）
+
+| ID | 含义 | 参数 |
+|:---|------|------|
+| {OP_HOLD} | 维持当前状态 | — |
+| {OP_ADD} | 新增/增加 | {id, target} |
+| {OP_REDUCE} | 减少 | {id, reduce_to} |
+| {OP_REMOVE} | 移除/清空 | {id, reason_code} |
+| {OP_DEFER} | 推迟处理 | {id, reason_code} |
+
+### reason_code 枚举
+| Code | 含义 |
+|:--|------|
+| {THRESHOLD} | 阈值触发 |
+| {BLOCK} | 阻断条件 |
+| {FLAG} | 标志触发 |
+
+## 二、风控算子（Risk Ops）
+
+| ID | 含义 | 参数 |
+|:---|------|------|
+| {RISK_STOP} | 止损/停止 | {id, threshold} |
+| {RISK_HALVE} | 减半 | {id, reason_code} |
+| {RISK_ESCALATE} | 升级处理 | {id, level} |
+
+## 三、信号算子（Signal Ops）
+
+| ID | 含义 | 参数 |
+|:---|------|------|
+| {SIG_WATCH} | 加入观察 | {id, condition} |
+| {SIG_ENTRY} | 入场/触发 | {id, entry_point} |
+| {SIG_EXIT} | 出场/退出 | {id} |
+
+## 四、双层输出架构
+
+```
+Layer 1: 算子 JSON（内部，不推用户）
+  → ~120 Token · 供 validator 校验 · 供脚本解析
+
+Layer 2: 自然语言报告（推送给用户）
+  → 完整风格 + 分析细节 + 表格 + 风险
+```
+
+**规则**：算子 ID 永远不出现在用户可见输出中。

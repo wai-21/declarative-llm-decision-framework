@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+"""
+state_compiler.py — 声明式状态编译器
+
+将原始数据编译为 DecisionState JSON。
+LLM 只接收此结构做逻辑抉择。
+
+用法：
+  python3 state_compiler.py --compact   # <200 token 输出
+  python3 state_compiler.py --json      # 完整 JSON
+"""
+
+import json
+import argparse
+from datetime import datetime, timezone
+from typing import Dict, List, Any, Optional
+
+
+class StateCompiler:
+    """
+    抽象基类：子类实现 _compute_regime / _compute_items / _compute_alerts。
+    """
+    
+    def compile(self) -> Dict[str, Any]:
+        """编译完整 DecisionState。"""
+        return {
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'regime': self._compute_regime(),
+            'items': self._compute_items(),
+            'alerts': self._compute_alerts(),
+        }
+    
+    def _compute_regime(self) -> Dict:
+        """计算当前环境状态。子类实现。"""
+        raise NotImplementedError
+    
+    def _compute_items(self) -> List[Dict]:
+        """计算各项目状态。子类实现。"""
+        raise NotImplementedError
+    
+    def _compute_alerts(self) -> Dict:
+        """计算告警列表。子类实现。"""
+        raise NotImplementedError
+    
+    def compact(self) -> str:
+        """极简输出（< 200 Token），直接喂给 LLM。"""
+        state = self.compile()
+        lines = [
+            f"Regime:{state['regime'].get('name','?')} "
+            f"(L{state['regime'].get('level',0)}) "
+            f"cap={state['regime'].get('cap',0):.0%}"
+        ]
+        for item in state.get('items', []):
+            flags = ','.join(item.get('flags', []))
+            flag_str = f"[{flags}]" if flags else ""
+            lines.append(f"  {item['id']}{flag_str} {item.get('status','?')}")
+        critical = state.get('alerts', {}).get('critical', [])
+        if critical:
+            lines.append(f"CRIT:{','.join(critical)}")
+        return '\n'.join(lines)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='State Compiler')
+    parser.add_argument('--compact', action='store_true', help='极简输出')
+    parser.add_argument('--json', action='store_true', help='JSON 输出')
+    args = parser.parse_args()
+    
+    # 替换为你的子类
+    compiler = StateCompiler()
+    
+    if args.json:
+        print(json.dumps(compiler.compile(), indent=2, ensure_ascii=False, default=str))
+    else:
+        print(compiler.compact())
