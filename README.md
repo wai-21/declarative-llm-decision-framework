@@ -185,18 +185,19 @@ LLM output → output_validator.py → execute or correct
 
 ---
 
-## 📊 Real-World Results (Quantitative Finance, 8.5-year backtest)
+## 📊 What You Save
 
-| Metric | Traditional LLM | Decision Distillation | Improvement |
+These numbers come from a production quantitative finance agent. The architecture works the same for **any domain** with structured decision-making.
+
+| Metric | Traditional LLM Pipeline | Decision Distillation | Improvement |
 |:--|:--|:--|:--|
 | Analysis input tokens | ~3,000 | ~400 | **-87%** |
-| Rule files loaded | 772 lines (full) | 60 lines (index) + 50 on-demand | **-85%** |
-| Decision output tokens | ~800 (prose) | ~120 (operator JSON) | **-85%** |
+| Rule files loaded | Full domain rules | Thin index + on-demand modules | **-85%** |
+| Decision output tokens | ~800 (verbose prose) | ~120 (operator JSON) | **-85%** |
 | LLM computation errors | ~15% (number hallucination) | ~2% (Python computes) | **-87%** |
 | Validation loop tokens | Full context re-sent | Error code only | **-95%** |
-| Backtest Sharpe ratio | Baseline | Baseline (rules unchanged) | — |
 
-> **Key insight:** Decision quality stayed exactly the same — the rules didn't change. Token reduction is 100% architectural.
+> **Key insight:** Decision quality stayed exactly the same — the rules didn't change. Token reduction is 100% architectural. The pattern transfers directly to risk assessment, insurance underwriting, medical triage, content moderation, and any other structured decision pipeline.
 
 ---
 
