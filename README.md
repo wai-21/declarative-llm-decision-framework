@@ -237,6 +237,12 @@ MIT © 2026
 
 ---
 
+## ⚙️ Auto-Sync
+
+This repo ships a `post-commit` Git hook: **every local `commit` on `main` is automatically pushed to `origin` (GitHub)** via SSH. No manual `git push` needed — just commit and it goes live.
+
+---
+
 <p align="center">
   <sub>Built with ❤️ for anyone tired of watching their LLM hallucinate arithmetic.</sub>
 </p>
