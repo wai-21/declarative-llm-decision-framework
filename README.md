@@ -123,6 +123,18 @@ your-project/
 
 ---
 
+## 🧩 Templates / Modules
+
+Beyond the core decision-distillation templates, this repo also ships **standalone skill/agent modules** you can copy into your own project. Each lives under `templates/` as a `{name}.{ext}.tmpl` — replace the `{placeholders}` with your own choices.
+
+| Module | Template | What It Does |
+|:--|:--|:--|
+| **SkillWeaver Routing** | `templates/skillweaver_routing.md.tmpl` | 工具/技能过多时的精准路由：分解 → SAD 对齐 → 向量检索 → DAG 组合。替代"暴力塞入全部工具描述"，Token 降 ~99.9%、选择准确率大幅提升。参数字段：`{EMBEDDING_MODEL_EN}` / `{EMBEDDING_MODEL_EN_V2}` / `{EMBEDDING_MODEL_ZH}` / `{RERANKER_MODEL}` / `{LLM_MODEL}` |
+
+> 用法：复制 `templates/skillweaver_routing.md.tmpl` 到你的项目，将 `{占位符}` 替换为实际选型（Embedding / Reranker / LLM 模型），即可作为技能路由层接入。
+
+---
+
 ## 🚀 Quick Start
 
 ### 1. Clone & Copy Templates
