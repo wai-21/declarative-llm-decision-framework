@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-output_validator.py — LLM 输出强制校验器
+output_validator.py — LLM Output Validator
 
-功能：
-1. 结构校验 — 输出必须符合 schema
-2. 一致性校验 — 嵌套值之间逻辑矛盾检测
-3. 禁忌词阻断 — 禁止词 Regex
-4. 数字溯源 — LLM 输出中的数字必须在 API 原始数据白名单中
+Functions:
+1. Structure validation — output must conform to schema
+2. Consistency validation — detect logical contradictions across nested values
+3. Forbidden-word blocking — deny-list regex
+4. Number provenance — numbers in LLM output must exist in the API raw-data allowlist
 
-用法：
+Usage:
   from output_validator import validate_decision
   ok, errors, warnings = validate_decision(llm_output_json, api_provenance)
   if not ok:
-      # 仅返回 error_code + 违规数值给 LLM 修正
+      # return only error_code + offending values to the LLM for correction
       pass
 """
 
@@ -22,17 +22,17 @@ from typing import List, Tuple, Optional, Dict, Set
 
 
 # ═══════════════════════════════════════════════
-# 1. 禁忌词（领域特定）
+# 1. Forbidden words (domain-specific)
 # ═══════════════════════════════════════════════
 
 FORBIDDEN_WORDS = [
-    # 替换为你的领域禁忌词
-    # "建议买入", "全仓", "必涨", "零风险"
+    # replace with your domain's forbidden words
+    # e.g. "strong buy", "all-in", "guaranteed to rise", "zero risk"
 ]
 
 
 def check_forbidden(text: str) -> List[str]:
-    """检查文本中是否含禁忌词。"""
+    """Check whether the text contains forbidden words."""
     triggered = []
     for word in FORBIDDEN_WORDS:
         if word in text:
@@ -41,69 +41,69 @@ def check_forbidden(text: str) -> List[str]:
 
 
 # ═══════════════════════════════════════════════
-# 2. 结构校验
+# 2. Structure validation
 # ═══════════════════════════════════════════════
 
 def validate_structure(data: dict, schema: dict) -> Tuple[bool, List[str]]:
     """
-    Pydantic-free 结构校验。
-    
-    schema 格式：
+    Pydantic-free structural validation.
+
+    schema format:
     {
         "field_name": {"type": "str", "required": True, "enum": [...], "min": 0, "max": 1},
         ...
     }
     """
     errors = []
-    
+
     for field, rules in schema.items():
-        # 必填检查
+        # required check
         if rules.get('required', False) and field not in data:
-            errors.append(f"缺失必填字段: {field}")
+            errors.append(f"Missing required field: {field}")
             continue
-        
+
         if field not in data:
             continue
-        
+
         value = data[field]
-        
-        # 类型检查
+
+        # type check
         expected_type = rules.get('type')
         if expected_type == 'str' and not isinstance(value, str):
-            errors.append(f"{field} 应为 string, 得到 {type(value).__name__}")
+            errors.append(f"{field} should be string, got {type(value).__name__}")
         elif expected_type == 'int' and not isinstance(value, int):
-            errors.append(f"{field} 应为 int")
+            errors.append(f"{field} should be int")
         elif expected_type == 'float' and not isinstance(value, (int, float)):
-            errors.append(f"{field} 应为 number")
+            errors.append(f"{field} should be number")
         elif expected_type == 'list' and not isinstance(value, list):
-            errors.append(f"{field} 应为 list")
-        
-        # 枚举检查
+            errors.append(f"{field} should be list")
+
+        # enum check
         if 'enum' in rules and value not in rules['enum']:
-            errors.append(f"{field} 值 {value} 不在允许范围: {rules['enum']}")
-        
-        # 范围检查
+            errors.append(f"{field} value {value} not in allowed range: {rules['enum']}")
+
+        # range check
         if 'min' in rules and isinstance(value, (int, float)) and value < rules['min']:
-            errors.append(f"{field} 值 {value} < 最小值 {rules['min']}")
+            errors.append(f"{field} value {value} < min {rules['min']}")
         if 'max' in rules and isinstance(value, (int, float)) and value > rules['max']:
-            errors.append(f"{field} 值 {value} > 最大值 {rules['max']}")
-    
+            errors.append(f"{field} value {value} > max {rules['max']}")
+
     return len(errors) == 0, errors
 
 
 # ═══════════════════════════════════════════════
-# 3. 一致性校验（跨字段逻辑矛盾检测）
+# 3. Consistency validation (cross-field contradiction detection)
 # ═══════════════════════════════════════════════
 
 def validate_consistency(data: dict, rules: List[dict]) -> Tuple[bool, List[str]]:
     """
-    一致性校验。
-    
-    rules 格式：
+    Consistency validation.
+
+    rules format:
     [
         {
             "condition": lambda d: d.get("regime") == "RED" and d.get("cap") > 0,
-            "message": "RED regime 下 cap 必须为 0"
+            "message": "cap must be 0 under RED regime"
         },
         ...
     ]
@@ -114,22 +114,22 @@ def validate_consistency(data: dict, rules: List[dict]) -> Tuple[bool, List[str]
             if rule['condition'](data):
                 errors.append(rule['message'])
         except Exception as e:
-            errors.append(f"一致性规则执行错误: {e}")
+            errors.append(f"Consistency rule execution error: {e}")
     return len(errors) == 0, errors
 
 
 # ═══════════════════════════════════════════════
-# 4. 数字溯源
+# 4. Number provenance
 # ═══════════════════════════════════════════════
 
 class NumberProvenance:
-    """从 API 原始数据中提取数字白名单，校验 LLM 输出。"""
-    
+    """Extract a number allowlist from API raw data and validate LLM output against it."""
+
     def __init__(self):
         self.allowed_numbers: Set[float] = set()
-    
+
     def ingest(self, data: dict, source: str):
-        """从 API 返回数据提取数字加入白名单。"""
+        """Extract numbers from API responses into the allowlist."""
         text = json.dumps(data, default=str)
         numbers = re.findall(r'-?\d+\.?\d*', text)
         for n in numbers:
@@ -137,33 +137,33 @@ class NumberProvenance:
                 self.allowed_numbers.add(round(float(n), 4))
             except ValueError:
                 pass
-    
+
     def verify(self, llm_output: str, tolerance: float = 0.1) -> List[Tuple[str, float]]:
-        """校验 LLM 输出中的数字是否在白名单中。"""
+        """Check whether numbers in LLM output are within the allowlist."""
         violations = []
         numbers = re.findall(r'-?\d+\.?\d*', llm_output)
-        
+
         for n in numbers:
             try:
                 val = round(float(n), 4)
             except ValueError:
                 continue
-            
-            # 跳过年份、布尔值、小整数
+
+            # skip years, booleans, small integers
             if 2020 <= val <= 2030:
                 continue
             if val in (0, 1):
                 continue
-            
+
             found = any(abs(val - a) < tolerance for a in self.allowed_numbers)
             if not found:
                 violations.append((n, val))
-        
+
         return violations
 
 
 # ═══════════════════════════════════════════════
-# 5. 一键校验入口
+# 5. One-call validation entry
 # ═══════════════════════════════════════════════
 
 def validate_decision(
@@ -174,32 +174,32 @@ def validate_decision(
     llm_text: str = ""
 ) -> Tuple[bool, List[str], List[str]]:
     """
-    一键校验 LLM 决策输出。
-    
+    One-call validation of LLM decision output.
+
     Returns:
         (ok, errors, warnings)
     """
     errors = []
     warnings = []
-    
-    # 1. 结构校验
+
+    # 1. structure
     ok_struct, errs = validate_structure(llm_output, schema)
     errors.extend(errs)
-    
-    # 2. 一致性校验
+
+    # 2. consistency
     ok_cons, errs = validate_consistency(llm_output, consistency_rules)
     errors.extend(errs)
-    
-    # 3. 禁忌词
+
+    # 3. forbidden words
     forbidden = check_forbidden(llm_text or json.dumps(llm_output))
     if forbidden:
-        errors.append(f"禁忌词触发: {forbidden}")
-    
-    # 4. 数字溯源
+        errors.append(f"Forbidden word triggered: {forbidden}")
+
+    # 4. number provenance
     if provenance:
         violations = provenance.verify(llm_text or json.dumps(llm_output))
         if violations:
-            warnings.append(f"数字溯源可疑: {violations[:10]}")
-    
+            warnings.append(f"Suspect number provenance: {violations[:10]}")
+
     ok = len(errors) == 0
     return ok, errors, warnings

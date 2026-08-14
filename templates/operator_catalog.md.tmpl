@@ -1,50 +1,50 @@
-# Operator Catalog — 决策算子库
+# Operator Catalog — Decision Operator Library
 
-> 算子 = 内部决策脚手架，不直接输出给用户。
-> 面向用户的报告始终是自然语言。
-> 算子用于：压缩 LLM 内部决策路径、供 validator 校验、供脚本解析执行。
+> Operators = internal decision scaffolding, never shown directly to the user.
+> User-facing reports are always natural language.
+> Operators are used to: compress the LLM's internal decision path, feed the validator, and let scripts parse/execute.
 
-## 一、动作算子（Action Ops）
+## 1. Action Operators (Action Ops)
 
-| ID | 含义 | 参数 |
+| ID | Meaning | Params |
 |:---|------|------|
-| {OP_HOLD} | 维持当前状态 | — |
-| {OP_ADD} | 新增/增加 | {id, target} |
-| {OP_REDUCE} | 减少 | {id, reduce_to} |
-| {OP_REMOVE} | 移除/清空 | {id, reason_code} |
-| {OP_DEFER} | 推迟处理 | {id, reason_code} |
+| {OP_HOLD} | Keep current state | — |
+| {OP_ADD} | Add / increase | {id, target} |
+| {OP_REDUCE} | Decrease | {id, reduce_to} |
+| {OP_REMOVE} | Remove / clear | {id, reason_code} |
+| {OP_DEFER} | Defer handling | {id, reason_code} |
 
-### reason_code 枚举
-| Code | 含义 |
+### reason_code enum
+| Code | Meaning |
 |:--|------|
-| {THRESHOLD} | 阈值触发 |
-| {BLOCK} | 阻断条件 |
-| {FLAG} | 标志触发 |
+| {THRESHOLD} | Threshold triggered |
+| {BLOCK} | Blocking condition |
+| {FLAG} | Flag triggered |
 
-## 二、风控算子（Risk Ops）
+## 2. Risk Operators (Risk Ops)
 
-| ID | 含义 | 参数 |
+| ID | Meaning | Params |
 |:---|------|------|
-| {RISK_STOP} | 止损/停止 | {id, threshold} |
-| {RISK_HALVE} | 减半 | {id, reason_code} |
-| {RISK_ESCALATE} | 升级处理 | {id, level} |
+| {RISK_STOP} | Stop-loss / halt | {id, threshold} |
+| {RISK_HALVE} | Halve | {id, reason_code} |
+| {RISK_ESCALATE} | Escalate | {id, level} |
 
-## 三、信号算子（Signal Ops）
+## 3. Signal Operators (Signal Ops)
 
-| ID | 含义 | 参数 |
+| ID | Meaning | Params |
 |:---|------|------|
-| {SIG_WATCH} | 加入观察 | {id, condition} |
-| {SIG_ENTRY} | 入场/触发 | {id, entry_point} |
-| {SIG_EXIT} | 出场/退出 | {id} |
+| {SIG_WATCH} | Add to watch | {id, condition} |
+| {SIG_ENTRY} | Entry / trigger | {id, entry_point} |
+| {SIG_EXIT} | Exit / leave | {id} |
 
-## 四、双层输出架构
+## 4. Two-Layer Output Architecture
 
 ```
-Layer 1: 算子 JSON（内部，不推用户）
-  → ~120 Token · 供 validator 校验 · 供脚本解析
+Layer 1: Operator JSON (internal, not pushed to user)
+  → ~120 tokens · for validator · for script parsing
 
-Layer 2: 自然语言报告（推送给用户）
-  → 完整风格 + 分析细节 + 表格 + 风险
+Layer 2: Natural-language report (pushed to user)
+  → full style + analysis details + tables + risk
 ```
 
-**规则**：算子 ID 永远不出现在用户可见输出中。
+**Rule**: Operator IDs never appear in user-visible output.

@@ -1,93 +1,93 @@
-# SkillWeaver 精准技能路由 — 通用版
+# SkillWeaver Precise Skill Routing — Generic Version
 
-> **本技能是基于 SkillWeaver 论文框架的「自建集成模板」（非现成产品）**：把学术论文的 decompose→retrieve→compose+SAD 方案落地为可复用路由，核心目标是**大幅降低 Agent 在工具/技能过载时的 Token 消耗**。
-> 当 Agent 可用工具/技能过多时，"该用哪个工具"比"能不能用"更重要。
-> 本技能提炼自 SkillWeaver 框架（Xueping Gao 等；阿里云 + OSU + CMU；arXiv:2606.18051，2026-06 预印本，非产品）：
-> 用「分解 → 检索 → 组合」三阶段管线替代"把所有工具描述暴力塞入上下文"，
-> 论文实测上下文消耗降 99% 以上；VentureBeat 报道极端 bench（2209 技能）主模型 Token 884,000 → ~1,160（非论文直接测量，仅供量级参考）。
-> 复制本模板后，将下方 `{占位符}` 替换为你的实际选型即可。
+> **This module is a self-integrated template built on the SkillWeaver paper framework (not an off-the-shelf product):** it turns the academic decompose→retrieve→compose + SAD design into a reusable router whose core goal is **drastically cutting an agent's Token cost under tool/skill overload**.
+> When an agent has too many tools/skills, *"which tool to use"* matters more than *"can it be used at all"*.
+> Built from the SkillWeaver framework (Xueping Gao et al.; Alibaba Cloud + OSU + CMU; arXiv:2606.18051, June 2026 preprint, not a product):
+> a three-stage pipeline — decompose → retrieve → compose — replaces "dumping every tool description into context".
+> Paper reports >99% context-consumption reduction; VentureBeat cites an extreme bench (2,209 skills) where the main-model Token fell from 884,000 → ~1,160 (not a direct paper measurement, magnitude reference only).
+> After copying this template, replace the `{PLACEHOLDERS}` below with your actual choices.
 
-## 何时使用本技能
+## When to use this skill
 
-- 可用工具/技能数量多（几十到上千），无法/不宜全部塞入上下文
-- 用户请求需要**组合多个工具**才能完成（如"下载数据→转换格式→生成报告"）
-- 工具描述总 Token 占用过高、命中率低、出现上下文溢出/截断报错
-- 任何需要"从工具库中选对工具"的决策点
+- Many available tools/skills (dozens to thousands); cannot / should not all fit into context
+- The user request needs **multiple combined tools** to complete (e.g. "download data → transform format → generate report")
+- Tool-description Token footprint is too high, hit-rate is low, or context overflow/truncation errors appear
+- Any decision point that requires "picking the right tool from a tool library"
 
-**不要用**：工具数量少（<20）且一次性任务时，直接调用即可，不必走完整管线。
+**Do not use:** when tool count is small (<20) and the task is one-shot, just call directly — no need for the full pipeline.
 
-## 核心理念
+## Core idea
 
-把"让 LLM 读完整本百科全书再回答"改成"先用向量检索翻到正确页码，再让 LLM 只读那一页"。
-
-```
-用户查询 → Decompose(子任务序列) → Retrieve(候选技能集) → Compose(DAG 执行图)
-                    ↑____________ SAD 反馈环路贯穿 ____________|
-```
-
-## 三阶段管线 + SAD
-
-### 阶段 0（一次性，离线）：建技能索引
-
-1. 为每个可用技能/工具准备 `{name, description}`
-   - **描述必须用工具自己的技术词汇**（如 `api-client`、`http-fetch`），不要意译
-2. Embedding 模型编码描述（替换为你的选型）：
-   - 英文：`{EMBEDDING_MODEL_EN}`（轻量，e.g. all-MiniLM-L6-v2）/ `{EMBEDDING_MODEL_EN_V2}`（更准，e.g. BGE-base-en-v1.5）
-   - 中文：`{EMBEDDING_MODEL_ZH}`（e.g. BAAI/bge-base-zh-v1.5）
-3. 建 FAISS 索引（`IndexFlatIP` 即可；2209 个技能约 15 秒建库，单次查询 <15ms）
-
-### 阶段 1：Decompose 任务分解
-
-- 将用户查询拆为**有序原子子任务**，每个子任务应对应一个可执行工具
-- ⚠️ **防过度分解**：模型越大越倾向拆得过细（大厨把红烧肉拆成 8 步，货架上只有"猪肉-五花"），微观步骤在技能库中找不到匹配 → 检索全灭。**分解粒度是检索准确率的最大瓶颈**
-
-### 阶段 2：SAD 反馈环（核心创新，必须执行）
-
-对齐 LLM 词汇与工具库词汇：
+Change "let the LLM read the entire encyclopedia before answering" into "use vector retrieval to flip to the right page first, then let the LLM read only that page".
 
 ```
-① 子任务(LLM 的话) → ② 语义检索 Top-K → ③ 回注工具名+描述 → ④ LLM 用工具词汇重写
-→ 有变化则回到①再检索，直至无变化或达到 max_iter(3)
+User query → Decompose (subtask sequence) → Retrieve (candidate skill set) → Compose (DAG execution graph)
+                    ↑____________ SAD feedback loop throughout ____________|
 ```
 
-- 效果（论文 CompSkillBench，2209 技能库）：SAD 将 7B 分解器（Qwen2.5-7B）准确率 51.0% → 67.7%（**+32.7%**，Wilcoxon p<10⁻⁶）
-- ⚠️ 模型越大越倾向过度分解（粒度不匹配技能库），反而降低检索命中；**先对齐粒度，再谈堆算力**
+## Three-stage pipeline + SAD
 
-### 阶段 3：Retrieve 候选召回（LLM 不参与，0 Token）
+### Stage 0 (one-time, offline): build the skill index
 
-- Bi-Encoder 向量检索召回 Top-K（k=5~10）
-- ⚠️ Bi-Encoder 召回 Top-10 ≈ 71.6%，但 Top-1 仅 ≈ 37.1% → **生产环境必须加重排**：
-  Cross-Encoder（如 `{RERANKER_MODEL}`）或 LLM Reranker 对候选精排
+1. Prepare `{name, description}` for every available skill/tool
+   - **Descriptions must use the tool's own technical vocabulary** (e.g. `api-client`, `http-fetch`), do not paraphrase
+2. Encode descriptions with an embedding model (replace with your choice):
+   - English: `{EMBEDDING_MODEL_EN}` (lightweight, e.g. all-MiniLM-L6-v2) / `{EMBEDDING_MODEL_EN_V2}` (more accurate, e.g. BGE-base-en-v1.5)
+   - Chinese: `{EMBEDDING_MODEL_ZH}` (e.g. BAAI/bge-base-zh-v1.5)
+3. Build a FAISS index (`IndexFlatIP` suffices; 2,209 skills build in ~15s, single query <15ms)
 
-### 阶段 4：Compose 组合 DAG
+### Stage 1: Decompose the task
 
-- 评估候选工具间兼容性（前序输出 = 后续输入），为每个子任务选定最终工具
-- 输出 DAG：节点=工具，边=依赖；无依赖的步骤并行、有依赖的按序执行
-- 优先 DAG 预规划，避免 ReAct 式"走一步看一步"：反应式在长链路、多工具编排下准确率显著下降，须先规划完整路线再执行
+- Split the user query into **ordered atomic subtasks**, each mapping to one executable tool
+- ⚠️ **Avoid over-decomposition**: larger models tend to split too finely (a chef breaks "braised pork" into 8 steps while the shelf only has "pork-belly"), so micro-steps find no match in the skill library → retrieval collapses entirely. **Decomposition granularity is the #1 bottleneck of retrieval accuracy**
 
-## 生产必加：错误恢复层（论文未覆盖）
+### Stage 2: SAD feedback loop (core innovation, must run)
 
-- 每节点：超时阈值 + 重试策略
-- 首选工具失败 → 自动降级备选工具
-- 断点续传：已成功节点不重跑
-- 输出校验：每步输出格式校验，防畸形数据向下游传播
+Align the LLM's vocabulary with the tool library's vocabulary:
 
-## 关键认知（决策参考）
+```
+① subtask (LLM's words) → ② semantic retrieval Top-K → ③ inject tool name+description → ④ LLM rewrites using the tool's vocabulary
+→ if changed, go back to ① and retrieve again, until no change or max_iter (3)
+```
 
-1. **对齐 > 算力**：路由/对齐到位的小模型常优于无对齐的大模型。与其盲目升级模型，不如先做工具词汇对齐
-2. **规划式 > 反应式**：复杂工具编排必须"先想清楚再做"（DAG 预规划），ReAct 只适合单步简单场景
-3. **分解粒度是瓶颈**：检索算法再强，分解错了也白搭；用 SAD 把粒度拉回现实
+- Effect (paper's CompSkillBench, 2,209-skill library): SAD lifts the 7B decomposer (Qwen2.5-7B) accuracy **51.0% → 67.7% (+32.7%, Wilcoxon p<10⁻⁶)**
+- ⚠️ Larger models tend to over-decompose (granularity mismatched to the skill library), which instead lowers retrieval hit-rate; **align granularity first, then talk about stacking compute**
 
-## 参考代码骨架（Python）
+### Stage 3: Retrieve candidates (LLM not involved, 0 Token)
 
-### 索引构建
+- Bi-Encoder vector retrieval recalls Top-K (k=5~10)
+- ⚠️ Bi-Encoder recall Top-10 ≈ 71.6%, but Top-1 only ≈ 37.1% → **production must add a reranker**:
+  Cross-Encoder (e.g. `{RERANKER_MODEL}`) or LLM Reranker to re-rank candidates precisely
+
+### Stage 4: Compose the DAG
+
+- Evaluate compatibility between candidate tools (prior output = subsequent input), pick the final tool for each subtask
+- Output a DAG: nodes = tools, edges = dependencies; steps without dependencies run in parallel, dependent steps run in order
+- Prefer DAG pre-planning; avoid ReAct-style "step-by-step": reactive planning degrades sharply on long chains and multi-tool orchestration — plan the full route before executing
+
+## Production must-add: error recovery layer (not covered by the paper)
+
+- Per node: timeout threshold + retry strategy
+- Primary tool fails → auto-degrade to a fallback tool
+- Resume from breakpoint: already-successful nodes are not re-run
+- Output validation: validate each step's output format to stop malformed data propagating downstream
+
+## Key insights (decision references)
+
+1. **Alignment > compute**: a small model with good routing/alignment often beats a bare large model. Before upgrading the model, do tool-vocabulary alignment first
+2. **Planning > reactive**: complex tool orchestration must "think it through before doing" (DAG pre-planning); ReAct only fits single-step simple scenarios
+3. **Decomposition granularity is the bottleneck**: no matter how strong the retrieval algorithm, wrong decomposition wastes it; use SAD to pull granularity back to reality
+
+## Reference code skeleton (Python)
+
+### Index construction
 
 ```python
 from sentence_transformers import SentenceTransformer
 import faiss, numpy as np, json
 
-skills = [...]  # [{"name": "api-client", "desc": "通过HTTP API获取远程数据"}, ...]
-encoder = SentenceTransformer("{EMBEDDING_MODEL_EN}")  # 中文用 {EMBEDDING_MODEL_ZH}
+skills = [...]  # [{"name": "api-client", "desc": "Fetch remote data via HTTP API"}, ...]
+encoder = SentenceTransformer("{EMBEDDING_MODEL_EN}")  # Chinese: {EMBEDDING_MODEL_ZH}
 embeddings = encoder.encode([s["desc"] for s in skills])
 index = faiss.IndexFlatIP(embeddings.shape[1])
 index.add(embeddings.astype(np.float32))
@@ -95,10 +95,10 @@ index.add(embeddings.astype(np.float32))
 
 ```python
 from langchain_openai import ChatOpenAI
-llm = ChatOpenAI(model="{LLM_MODEL}")  # 任意 LLM
+llm = ChatOpenAI(model="{LLM_MODEL}")  # any LLM
 
 def decompose(query):
-    prompt = f"将用户查询拆解为原子子任务(JSON): {query}"
+    prompt = f"Decompose the user query into atomic subtasks (JSON): {query}"
     return json.loads(llm.invoke(prompt).content)["subtasks"]
 
 def retrieve_topk(subtask, k=5):
@@ -111,9 +111,9 @@ def sad_loop(subtasks, max_iter=3):
         changed = False
         for i, t in enumerate(subtasks):
             cands = retrieve_topk(t)
-            ctx = "、".join(f"{c['name']}: {c['desc']}" for c in cands)
+            ctx = " / ".join(f"{c['name']}: {c['desc']}" for c in cands)
             rewritten = llm.invoke(
-                f"参考可用工具[{ctx}]，用工具的真实词汇重写子任务'{t}'"
+                f"Using the available tools [{ctx}], rewrite subtask '{t}' in the tools' real vocabulary"
             ).content.strip()
             if rewritten != t:
                 subtasks[i] = rewritten
@@ -124,13 +124,13 @@ def sad_loop(subtasks, max_iter=3):
 
 def compose_dag(subtasks):
     plan = [retrieve_topk(t, k=1)[0]["name"] for t in subtasks]
-    # LLM 评估兼容性 → 输出 nodes/edges
+    # LLM evaluates compatibility → output nodes/edges
     return {"nodes": [{"tool": t} for t in plan], "edges": [...]}
 ```
 
-## 参考来源
+## References
 
-- 论文：arXiv:2606.18051 — SkillWeaver: Compositional Skill Routing for LLM Agents（Xueping Gao 等，2026-06）
-- 关键数据出处：CompSkillBench（300 查询 / 2,209 真实 MCP 技能 / 24 类）；SAD 51.0%→67.7%（+32.7%）；Top-1≈37.1% / Top-10≈71.6%；上下文降 99%+
-- Token 884K→1.16K 为 VentureBeat 报道（2026-07-02）量级参考，非论文直接测量
-- 复现组件：{EMBEDDING_MODEL_EN} / {EMBEDDING_MODEL_EN_V2} + FAISS + LangChain（论文用 MiniLM bi-encoder + Qwen2.5-7B decomposer）
+- Paper: arXiv:2606.18051 — SkillWeaver: Compositional Skill Routing for LLM Agents (Xueping Gao et al., June 2026)
+- Key data sources: CompSkillBench (300 queries / 2,209 real MCP skills / 24 categories); SAD 51.0%→67.7% (+32.7%); Top-1≈37.1% / Top-10≈71.6%; context reduction >99%
+- Token 884K→1.16K is a VentureBeat report (2026-07-02) magnitude reference, not a direct paper measurement
+- Reproduction components: {EMBEDDING_MODEL_EN} / {EMBEDDING_MODEL_EN_V2} + FAISS + LangChain (paper uses MiniLM bi-encoder + Qwen2.5-7B decomposer)

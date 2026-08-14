@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-state_compiler.py — 声明式状态编译器
+state_compiler.py — Declarative State Compiler
 
-将原始数据编译为 DecisionState JSON。
-LLM 只接收此结构做逻辑抉择。
+Compiles raw data into a DecisionState JSON.
+The LLM receives only this structure for logical decisions.
 
-用法：
-  python3 state_compiler.py --compact   # <200 token 输出
-  python3 state_compiler.py --json      # 完整 JSON
+Usage:
+  python3 state_compiler.py --compact   # <200 token output
+  python3 state_compiler.py --json      # full JSON
 """
 
 import json
@@ -18,32 +18,32 @@ from typing import Dict, List, Any, Optional
 
 class StateCompiler:
     """
-    抽象基类：子类实现 _compute_regime / _compute_items / _compute_alerts。
+    Abstract base class: subclasses implement _compute_regime / _compute_items / _compute_alerts.
     """
-    
+
     def compile(self) -> Dict[str, Any]:
-        """编译完整 DecisionState。"""
+        """Compile the full DecisionState."""
         return {
             'timestamp': datetime.now(timezone.utc).isoformat(),
             'regime': self._compute_regime(),
             'items': self._compute_items(),
             'alerts': self._compute_alerts(),
         }
-    
+
     def _compute_regime(self) -> Dict:
-        """计算当前环境状态。子类实现。"""
+        """Compute current environment state. Implement in subclass."""
         raise NotImplementedError
-    
+
     def _compute_items(self) -> List[Dict]:
-        """计算各项目状态。子类实现。"""
+        """Compute per-item state. Implement in subclass."""
         raise NotImplementedError
-    
+
     def _compute_alerts(self) -> Dict:
-        """计算告警列表。子类实现。"""
+        """Compute alert list. Implement in subclass."""
         raise NotImplementedError
-    
+
     def compact(self) -> str:
-        """极简输出（< 200 Token），直接喂给 LLM。"""
+        """Minimal output (<200 tokens), fed directly to the LLM."""
         state = self.compile()
         lines = [
             f"Regime:{state['regime'].get('name','?')} "
@@ -62,13 +62,13 @@ class StateCompiler:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='State Compiler')
-    parser.add_argument('--compact', action='store_true', help='极简输出')
-    parser.add_argument('--json', action='store_true', help='JSON 输出')
+    parser.add_argument('--compact', action='store_true', help='minimal output')
+    parser.add_argument('--json', action='store_true', help='JSON output')
     args = parser.parse_args()
-    
-    # 替换为你的子类
+
+    # replace with your subclass
     compiler = StateCompiler()
-    
+
     if args.json:
         print(json.dumps(compiler.compile(), indent=2, ensure_ascii=False, default=str))
     else:

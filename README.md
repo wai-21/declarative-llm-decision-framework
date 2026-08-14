@@ -3,14 +3,13 @@
   <img src="https://img.shields.io/badge/LLM_Cost-Reduced-blue" alt="LLM Cost Reduced">
   <img src="https://img.shields.io/badge/License-MIT-blue" alt="License MIT">
   <img src="https://img.shields.io/badge/Status-Production-green" alt="Production Ready">
-  <img src="https://img.shields.io/badge/Languages-EN%20%7C%20ZH-orange" alt="EN ZH">
+  <img src="https://img.shields.io/badge/Language-EN-blue" alt="English">
 </p>
 
 <h1 align="center">🔥 LLM Token Optimization Toolkit</h1>
 <p align="center"><b>Slash AI Agent Token Cost by 60–99%</b> — Decision Distillation · Skill Routing · Quant Token Playbook</p>
-<p align="center"><b>LLM Token 优化工具箱</b>：把 Agent 的 Token 成本砍掉 60–99%</p>
 
-> **Keywords / 关键词索引**: `LLM token optimization` · `reduce LLM cost` · `agent token reduction` · `prompt token saving` · `context window optimization` · `LLM cost reduction 2026` · `AI agent efficiency` · `decision distillation` · `skill routing` · `FAISS tool retrieval` · `prompt caching` · `model layering` · `token budget` · `OpenClaw token saving` · `量化交易 agent 省 token` · `降低大模型 API 费用`
+> **Keywords**: `LLM token optimization` · `reduce LLM cost` · `agent token reduction` · `prompt token saving` · `context window optimization` · `LLM cost reduction 2026` · `AI agent efficiency` · `decision distillation` · `skill routing` · `FAISS tool retrieval` · `prompt caching` · `model layering` · `token budget` · `quant trading agent token cost` · `lower LLM API bill`
 
 Stop burning money on LLM API bills. This repository bundles **three production-proven techniques** to cut token consumption for LLM-powered agents and AI workflows — **without losing decision quality**:
 
@@ -46,7 +45,7 @@ Every LLM-based agent makes the same expensive mistakes:
 - **Rule / tool files keep growing.** A 772-line prompt isn't helping — it's billing you every turn.
 - **Tool descriptions explode context.** Dumping 200 tool schemas into the prompt = massive, repeated token waste.
 
-> **Core thesis (贯穿三模块的核心命题):** *Move computation out of the LLM, keep only the decision inside it.* Compute in Python, route with vectors, budget your tokens — and the same quality costs a fraction.
+> **Core thesis:** *Move computation out of the LLM, keep only the decision inside it.* Compute in Python, route with vectors, budget your tokens — and the same quality costs a fraction.
 
 This repo is **not** a replacement for LangChain / AutoGen / CrewAI / OpenClaw. It is a **token-cost optimization layer** you drop inside them.
 
@@ -80,9 +79,8 @@ Four principles:
 
 **Reduce tool-routing tokens ~99% (884K → ~1.16K). Pick the right tool without dumping all descriptions into context.**
 
-> 工具/技能过多时，"该用哪个工具"比"能不能用"更重要。本模块是基于 SkillWeaver 论文框架的「自建集成模板」（非现成产品）：把 decompose→retrieve→compose + SAD 方案落地为可复用路由，核心目标是**大幅降低 Agent 在工具/技能过载时的 Token 消耗**。
-
-Three-stage pipeline + **SAD alignment loop**:
+> When an agent has too many tools/skills, *"which tool to use"* matters more than *"can it be used at all"*. This module is a **self-integrated template built on the SkillWeaver paper framework** (not an off-the-shelf product): it turns the academic decompose→retrieve→compose + SAD design into a reusable router whose core goal is **drastically cutting an agent's Token cost under tool/skill overload**.
+> Three-stage pipeline + **SAD alignment loop**:
 
 ```
 Decompose (subtasks) → Retrieve (vector Top-K, 0 LLM token) → Compose (DAG execution graph)
@@ -104,19 +102,19 @@ Key facts (verified vs **arXiv:2606.18051**, Alibaba Cloud + OSU + CMU):
 
 **Cut quant / trading / signal agent tokens 60–80% with 10 prioritized strategies.**
 
-> 本地 OpenClaw 量化/交易 agent 的 token 成本优化手册。同样决策质量下把 token 消耗压到最低。十大策略按性价比排序，最快见效组合（指标外部化 → 模型分层 → 结构化输出 → 限窗 → 限输出）通常降 60~80%。
+> A token-cost optimization playbook for local OpenClaw quant / trading / signal agents. Squeeze token consumption to the minimum while keeping decision quality identical. The ten strategies are ranked by cost-performance; the fastest combo (externalize computation → model layering → structured output → limit window → cap output) typically cuts 60–80%.
 
-**Token 三大来源 (locate the biggest leak first):** ① raw market/indicator data in prompt · ② accumulated history + tool results · ③ system prompt / tool descriptions / long outputs.
+**Three token sources (locate the biggest leak first):** ① raw market/indicator data in prompt · ② accumulated history + tool results · ③ system prompt / tool descriptions / long outputs.
 
 **Top 5 quick-win strategies (60–80% typical):**
 
 | # | Strategy | One-line action |
 |:--|:--|:--|
-| 1 | 指标外部化 (externalize computation) | LLM reads only `signal + reason`, never raw K-line |
-| 2 | 模型分层 (model layering) | high-freq → small quant model; complex → big model; rules → pure Python |
-| 7 | 工具裁剪 + 结构化输出 (trim + structured out) | return 4-field JSON; `maxTokens` 512–1024 |
-| 4 | 限窗 (limit context window) | `contextWindow` 8k–16k + sliding window |
-| 10 | 限输出 (cap output) | `temperature` 0–0.3 + `maxTokens` + stop sequence |
+| 1 | Externalize computation | LLM reads only `signal + reason`, never raw K-line |
+| 2 | Model layering | high-freq → small quant model; complex → big model; rules → pure Python |
+| 7 | Trim tools + structured output | return 4-field JSON; `maxTokens` 512–1024 |
+| 4 | Limit context window | `contextWindow` 8k–16k + sliding window |
+| 10 | Cap output | `temperature` 0–0.3 + `maxTokens` + stop sequence |
 
 Plus 5 deeper strategies: prompt compression, prompt caching (KV-cache), memory summarization, batch tool calls, event-driven frequency reduction. Full playbook + OpenClaw config landing points (models/agents) + verification command in **`skills/quant-token-opt/SKILL.md`**.
 
@@ -179,8 +177,8 @@ This toolkit is **framework-agnostic**. Drop it inside:
 
 The repo name stays `declarative-llm-decision-framework`, but you can multiply reach by setting these on **GitHub → Settings → About** (not editable via git):
 
-- **Description (建议)**: `LLM Token Optimization Toolkit — cut AI agent token cost 60–99%: Decision Distillation, SkillWeaver routing, Quant token playbook. Reduce LLM API bill.`
-- **Topics / tags (建议)**: `llm`, `token-optimization`, `prompt-engineering`, `cost-reduction`, `agent`, `langchain`, `rag`, `vector-search`, `faiss`, `prompt-caching`, `context-window`, `quant-trading`, `llm-agent`, `ai-efficiency`, `openclaw`
+- **Description (suggested)**: `LLM Token Optimization Toolkit — cut AI agent token cost 60–99%: Decision Distillation, SkillWeaver routing, Quant token playbook. Reduce LLM API bill.`
+- **Topics / tags (suggested)**: `llm`, `token-optimization`, `prompt-engineering`, `cost-reduction`, `agent`, `langchain`, `rag`, `vector-search`, `faiss`, `prompt-caching`, `context-window`, `quant-trading`, `llm-agent`, `ai-efficiency`, `openclaw`
 
 > Want an even broader name? Renaming the repo to e.g. `llm-token-optimization` is reversible (GitHub auto-redirects the old URL). Say the word and I'll adjust the clone + hook.
 

@@ -1,26 +1,26 @@
-# Rules Register — 声明式规则索引
+# Rules Register — Declarative Rule Index
 
-> 轻量索引，替代每次全量加载规则文件。
-> LLM 默认只加载本文件，按 Router 触发词展开对应模块。
+> Lightweight index replacing full rule-file loads every turn.
+> The LLM loads only this file by default and expands the matching module on Router trigger words.
 
-## Router 映射
+## Router Mapping
 
-| 触发词 | 展开文件 | Token 估算 |
+| Trigger word | Expand file | Token estimate |
 |--------|---------|:--:|
-| {触发词1} | {文件1} | ~{估算} |
-| {触发词2} | {文件2} | ~{估算} |
+| {trigger1} | {file1} | ~{estimate} |
+| {trigger2} | {file2} | ~{estimate} |
 | ... | ... | ... |
 
-## 全局常驻规则
+## Global always-on rules
 
-1. {规则1}
-2. {规则2}
-3. {规则3}
+1. {rule1}
+2. {rule2}
+3. {rule3}
 
-## 决策管道
+## Decision Pipeline
 
 ```
-[脚本预计算] → [DecisionState JSON] → [LLM 逻辑抉择] → [算子化输出] → [校验器]
+[script pre-compute] → [DecisionState JSON] → [LLM logical decision] → [operator output] → [validator]
 ```
 
-脚本层做数值计算，LLM 层只做逻辑编排。
+Script layer does numeric computation; LLM layer does only logical orchestration.
