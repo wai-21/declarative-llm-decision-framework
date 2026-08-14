@@ -1,0 +1,22 @@
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+
+# WorkBuddy / agent internal dirs
+.workbuddy/
+.qclaw/
+.openclaw/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# Env / secrets
+.env
+*.local
