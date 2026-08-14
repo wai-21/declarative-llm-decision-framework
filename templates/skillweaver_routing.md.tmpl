@@ -1,14 +1,10 @@
----
-name: "skillweaver-routing"
-description: "工具过多时的精准路由：分解→SAD对齐→向量检索→DAG组合，替代暴力塞入，Token降99%、准确率大涨。"
----
-
-# SkillWeaver 精准技能路由（通用版）
+# SkillWeaver 精准技能路由 — 通用版
 
 > 当 Agent 可用工具/技能过多时，"该用哪个工具"比"能不能用"更重要。
 > 本技能提炼自阿里研究院 SkillWeaver 框架（arXiv:2606.18051）：
 > 用「分解 → 检索 → 组合」三阶段管线替代"把所有工具描述暴力塞入上下文"，
 > 实测 Token 消耗降 99.9%（884,000 → ~1,160），工具选择准确率从 21.1% 大幅提升。
+> 复制本模板后，将下方 `{占位符}` 替换为你的实际选型即可。
 
 ## 何时使用本技能
 
@@ -34,9 +30,9 @@ description: "工具过多时的精准路由：分解→SAD对齐→向量检索
 
 1. 为每个可用技能/工具准备 `{name, description}`
    - **描述必须用工具自己的技术词汇**（如 `api-client`、`http-fetch`），不要意译
-2. Embedding 模型编码描述：
-   - 英文：`all-MiniLM-L6-v2`（轻量）/ `BGE-base-en-v1.5`（更准）
-   - 中文：`BAAI/bge-base-zh-v1.5`
+2. Embedding 模型编码描述（替换为你的选型）：
+   - 英文：`{EMBEDDING_MODEL_EN}`（轻量，e.g. all-MiniLM-L6-v2）/ `{EMBEDDING_MODEL_EN_V2}`（更准，e.g. BGE-base-en-v1.5）
+   - 中文：`{EMBEDDING_MODEL_ZH}`（e.g. BAAI/bge-base-zh-v1.5）
 3. 建 FAISS 索引（`IndexFlatIP` 即可；2209 个技能约 15 秒建库，单次查询 <15ms）
 
 ### 阶段 1：Decompose 任务分解
@@ -61,7 +57,7 @@ description: "工具过多时的精准路由：分解→SAD对齐→向量检索
 
 - Bi-Encoder 向量检索召回 Top-K（k=5~10）
 - ⚠️ Bi-Encoder 召回 Top-10 ≈ 70%，但 Top-1 仅 ≈ 37% → **生产环境必须加重排**：
-  Cross-Encoder（如 `cross-encoder/ms-marco-MiniLM-L-6-v2`）或 LLM Reranker 对候选精排
+  Cross-Encoder（如 `{RERANKER_MODEL}`）或 LLM Reranker 对候选精排
 
 ### 阶段 4：Compose 组合 DAG
 
@@ -91,7 +87,7 @@ from sentence_transformers import SentenceTransformer
 import faiss, numpy as np, json
 
 skills = [...]  # [{"name": "api-client", "desc": "通过HTTP API获取远程数据"}, ...]
-encoder = SentenceTransformer("all-MiniLM-L6-v2")  # 中文用 bge-base-zh-v1.5
+encoder = SentenceTransformer("{EMBEDDING_MODEL_EN}")  # 中文用 {EMBEDDING_MODEL_ZH}
 embeddings = encoder.encode([s["desc"] for s in skills])
 index = faiss.IndexFlatIP(embeddings.shape[1])
 index.add(embeddings.astype(np.float32))
@@ -101,7 +97,7 @@ index.add(embeddings.astype(np.float32))
 
 ```python
 from langchain_openai import ChatOpenAI
-llm = ChatOpenAI(model="...")  # 任意 LLM
+llm = ChatOpenAI(model="{LLM_MODEL}")  # 任意 LLM
 
 def decompose(query):
     prompt = f"将用户查询拆解为有序原子子任务(JSON): {query}"
@@ -138,4 +134,4 @@ def compose_dag(subtasks):
 
 - arXiv:2606.18051 SkillWeaver: Compositional Skill Routing for LLM Agents
 - VentureBeat 报道（Token 降 99%、884K→1.16K、21.1%→大幅领先）
-- 复现组件：all-MiniLM-L6-v2 / BGE-base-en-v1.5 + FAISS + LangChain
+- 复现组件：{EMBEDDING_MODEL_EN} / {EMBEDDING_MODEL_EN_V2} + FAISS + LangChain
