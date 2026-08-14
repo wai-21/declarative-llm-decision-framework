@@ -137,8 +137,8 @@ Plus 5 deeper strategies: prompt compression, prompt caching (KV-cache), memory 
 ## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/wai-21/declarative-llm-decision-framework.git
-cd declarative-llm-decision-framework
+git clone https://github.com/wai-21/llm-token-optimization.git
+cd llm-token-optimization
 ```
 
 - **Decision Distillation**: copy `templates/*` into your project's `rules/` + `scripts/`, replace `{placeholders}`.
@@ -175,12 +175,10 @@ This toolkit is **framework-agnostic**. Drop it inside:
 
 ## 🏷️ Boost GitHub Discoverability (SEO)
 
-The repo name stays `declarative-llm-decision-framework`, but you can multiply reach by setting these on **GitHub → Settings → About** (not editable via git):
+The repo is now named `llm-token-optimization`. Multiply reach by setting these on **GitHub → Settings → About** (not editable via git):
 
 - **Description (suggested)**: `LLM Token Optimization Toolkit — cut AI agent token cost 60–99%: Decision Distillation, SkillWeaver routing, Quant token playbook. Reduce LLM API bill.`
 - **Topics / tags (suggested)**: `llm`, `token-optimization`, `prompt-engineering`, `cost-reduction`, `agent`, `langchain`, `rag`, `vector-search`, `faiss`, `prompt-caching`, `context-window`, `quant-trading`, `llm-agent`, `ai-efficiency`, `openclaw`
-
-> Want an even broader name? Renaming the repo to e.g. `llm-token-optimization` is reversible (GitHub auto-redirects the old URL). Say the word and I'll adjust the clone + hook.
 
 ---
 
