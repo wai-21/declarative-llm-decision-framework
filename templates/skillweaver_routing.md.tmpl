@@ -1,9 +1,9 @@
 # SkillWeaver 精准技能路由 — 通用版
 
 > 当 Agent 可用工具/技能过多时，"该用哪个工具"比"能不能用"更重要。
-> 本技能提炼自阿里研究院 SkillWeaver 框架（arXiv:2606.18051）：
+> 本技能提炼自 SkillWeaver 框架（Xueping Gao 等；阿里云 + OSU + CMU；arXiv:2606.18051，2026-06 预印本，非产品）：
 > 用「分解 → 检索 → 组合」三阶段管线替代"把所有工具描述暴力塞入上下文"，
-> 实测 Token 消耗降 99.9%（884,000 → ~1,160），工具选择准确率从 21.1% 大幅提升。
+> 论文实测上下文消耗降 99% 以上；VentureBeat 报道极端 bench（2209 技能）主模型 Token 884,000 → ~1,160（非论文直接测量，仅供量级参考）。
 > 复制本模板后，将下方 `{占位符}` 替换为你的实际选型即可。
 
 ## 何时使用本技能
@@ -49,21 +49,20 @@
 → 有变化则回到①再检索，直至无变化或达到 max_iter(3)
 ```
 
-- 效果：7B 模型分解准确率 51.0% → 67.7%（+33%）；Qwen-Max 达 92%
-- 困难任务（4-5 技能协作）准确率提升 50%
-- 无 SAD 时 14B 模型反而 < 7B（过度分解陷阱）——对齐 > 算力
+- 效果（论文 CompSkillBench，2209 技能库）：SAD 将 7B 分解器（Qwen2.5-7B）准确率 51.0% → 67.7%（**+32.7%**，Wilcoxon p<10⁻⁶）
+- ⚠️ 模型越大越倾向过度分解（粒度不匹配技能库），反而降低检索命中；**先对齐粒度，再谈堆算力**
 
 ### 阶段 3：Retrieve 候选召回（LLM 不参与，0 Token）
 
 - Bi-Encoder 向量检索召回 Top-K（k=5~10）
-- ⚠️ Bi-Encoder 召回 Top-10 ≈ 70%，但 Top-1 仅 ≈ 37% → **生产环境必须加重排**：
+- ⚠️ Bi-Encoder 召回 Top-10 ≈ 71.6%，但 Top-1 仅 ≈ 37.1% → **生产环境必须加重排**：
   Cross-Encoder（如 `{RERANKER_MODEL}`）或 LLM Reranker 对候选精排
 
 ### 阶段 4：Compose 组合 DAG
 
 - 评估候选工具间兼容性（前序输出 = 后续输入），为每个子任务选定最终工具
 - 输出 DAG：节点=工具，边=依赖；无依赖的步骤并行、有依赖的按序执行
-- 不要用 ReAct 式"走一步看一步"（多工具编排场景实测 0% 准确率），必须先规划完整路线再执行
+- 优先 DAG 预规划，避免 ReAct 式"走一步看一步"：反应式在长链路、多工具编排下准确率显著下降，须先规划完整路线再执行
 
 ## 生产必加：错误恢复层（论文未覆盖）
 
@@ -74,7 +73,7 @@
 
 ## 关键认知（决策参考）
 
-1. **对齐 > 算力**：7B 小模型 + 好的路由/对齐策略 > 裸奔的 14B+ 大模型。与其升级模型，不如先做工具词汇对齐
+1. **对齐 > 算力**：路由/对齐到位的小模型常优于无对齐的大模型。与其盲目升级模型，不如先做工具词汇对齐
 2. **规划式 > 反应式**：复杂工具编排必须"先想清楚再做"（DAG 预规划），ReAct 只适合单步简单场景
 3. **分解粒度是瓶颈**：检索算法再强，分解错了也白搭；用 SAD 把粒度拉回现实
 
@@ -93,14 +92,12 @@ index = faiss.IndexFlatIP(embeddings.shape[1])
 index.add(embeddings.astype(np.float32))
 ```
 
-### 分解 + SAD + 组合
-
 ```python
 from langchain_openai import ChatOpenAI
 llm = ChatOpenAI(model="{LLM_MODEL}")  # 任意 LLM
 
 def decompose(query):
-    prompt = f"将用户查询拆解为有序原子子任务(JSON): {query}"
+    prompt = f"将用户查询拆解为原子子任务(JSON): {query}"
     return json.loads(llm.invoke(prompt).content)["subtasks"]
 
 def retrieve_topk(subtask, k=5):
@@ -132,6 +129,7 @@ def compose_dag(subtasks):
 
 ## 参考来源
 
-- arXiv:2606.18051 SkillWeaver: Compositional Skill Routing for LLM Agents
-- VentureBeat 报道（Token 降 99%、884K→1.16K、21.1%→大幅领先）
-- 复现组件：{EMBEDDING_MODEL_EN} / {EMBEDDING_MODEL_EN_V2} + FAISS + LangChain
+- 论文：arXiv:2606.18051 — SkillWeaver: Compositional Skill Routing for LLM Agents（Xueping Gao 等，2026-06）
+- 关键数据出处：CompSkillBench（300 查询 / 2,209 真实 MCP 技能 / 24 类）；SAD 51.0%→67.7%（+32.7%）；Top-1≈37.1% / Top-10≈71.6%；上下文降 99%+
+- Token 884K→1.16K 为 VentureBeat 报道（2026-07-02）量级参考，非论文直接测量
+- 复现组件：{EMBEDDING_MODEL_EN} / {EMBEDDING_MODEL_EN_V2} + FAISS + LangChain（论文用 MiniLM bi-encoder + Qwen2.5-7B decomposer）
